@@ -123,8 +123,8 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
     uint256 public buyBackRate = 150;
     uint256 public constant buyBackRateMax = 10000; // 100 = 1%
     uint256 public constant buyBackRateUL = 800; // 8% upperlimit
-    address public constant buyBackAddress =
-        0x000000000000000000000000000000000000dEaD;
+    address public buyBackAddress = 0x000000000000000000000000000000000000dEaD;
+    address public rewardsAddress;
 
     uint256 public entranceFeeFactor = 9990; // < 0.1% entrance fee - goes to pool
     uint256 public constant entranceFeeFactorMax = 10000;
@@ -470,13 +470,9 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
             buyBackAmt,
             0,
             earnedToAUTOPath,
-            address(this),
+            buyBackAddress,
             now + 600
         );
-
-        // Burn AUTO tokens
-        uint256 burnAmt = IERC20(AUTOAddress).balanceOf(address(this));
-        IERC20(AUTOAddress).safeTransfer(buyBackAddress, burnAmt);
 
         return _earnedAmt.sub(buyBackAmt);
     }
@@ -486,7 +482,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
             if (controllerFee > 0) {
                 uint256 fee =
                     _earnedAmt.mul(controllerFee).div(controllerFeeMax);
-                IERC20(venusAddress).safeTransfer(govAddress, fee);
+                IERC20(venusAddress).safeTransfer(rewardsAddress, fee);
                 return _earnedAmt.sub(fee);
             }
         }
@@ -638,6 +634,16 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         require(msg.sender == govAddress, "!gov");
         uniRouterAddress = _uniRouterAddress;
         _resetAllowances();
+    }
+
+    function setBuyBackAddress(address _buyBackAddress) public {
+        require(msg.sender == govAddress, "!gov");
+        buyBackAddress = _buyBackAddress;
+    }
+
+    function setRewardsAddress(address _rewardsAddress) public {
+        require(msg.sender == govAddress, "!gov");
+        rewardsAddress = _rewardsAddress;
     }
 
     function setDeleverAmtFactorMax(uint256 _deleverAmtFactorMax) public {
