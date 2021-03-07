@@ -89,7 +89,7 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
     address[] public MDXToEarnedPath;
 
     constructor(
-        address[] memory _addresses, //_gov_autofarm_AUTO_want_token0_token1_earned_farmContract_uniRouter_buyback_rewards,
+        address[] memory _addresses,
         uint256 _pid,
         bool _isCAKEStaking,
         bool _isSameAssetDeposit,
@@ -277,7 +277,7 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
                 0,
                 earnedToToken0Path,
                 address(this),
-                now + 60
+                now + 600
             );
         }
 
@@ -289,7 +289,7 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
                 0,
                 earnedToToken1Path,
                 address(this),
-                now + 60
+                now + 600
             );
         }
 
@@ -313,7 +313,7 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
                 0,
                 0,
                 address(this),
-                now + 60
+                now + 600
             );
         }
 
@@ -343,7 +343,7 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
                 0,
                 earnedToAUTOPath,
                 buyBackAddress,
-                now + 60
+                now + 600
             );
         }
 
@@ -385,7 +385,7 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
                 0,
                 token0ToEarnedPath,
                 address(this),
-                now + 60
+                now + 600
             );
         }
 
@@ -404,7 +404,7 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
                 0,
                 token1ToEarnedPath,
                 address(this),
-                now + 60
+                now + 600
             );
         }
     }
@@ -458,6 +458,16 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
     function setUniRouterAddress(address _uniRouterAddress) public {
         require(msg.sender == govAddress, "!gov");
         uniRouterAddress = _uniRouterAddress;
+    }
+
+    function setBuyBackAddress(address _buyBackAddress) public {
+        require(msg.sender == govAddress, "!gov");
+        buyBackAddress = _buyBackAddress;
+    }
+
+    function setRewardsAddress(address _rewardsAddress) public {
+        require(msg.sender == govAddress, "!gov");
+        rewardsAddress = _rewardsAddress;
     }
 
     function inCaseTokensGetStuck(
