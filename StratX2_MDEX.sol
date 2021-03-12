@@ -162,6 +162,7 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
     function deposit(address _userAddress, uint256 _wantAmt)
         public
         onlyOwner
+        nonReentrant
         whenNotPaused
         returns (uint256)
     {
@@ -532,7 +533,7 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
     ) internal {
         uint256[] memory amounts =
             IPancakeRouter02(_uniRouterAddress).getAmountsOut(_amountIn, _path);
-        uint256 amountOut = amounts[amounts.length - 1];
+        uint256 amountOut = amounts[amounts.length.sub(1)];
 
         IPancakeRouter02(_uniRouterAddress)
             .swapExactTokensForTokensSupportingFeeOnTransferTokens(
