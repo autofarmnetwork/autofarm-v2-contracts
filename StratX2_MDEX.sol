@@ -78,6 +78,8 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant withdrawFeeFactorMax = 10000;
     uint256 public constant withdrawFeeFactorLL = 9950; // 0.5% is the max entrance fee settable. LL = lowerlimit
 
+    uint256 public slippageFactor = 950; // 5% default slippage tolerance
+
     address[] public earnedToAUTOPath;
     address[] public earnedToToken0Path;
     address[] public earnedToToken1Path;
@@ -141,6 +143,20 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
 
         transferOwnership(autoFarmAddress);
     }
+
+    event SetSettings(
+        uint256 _entranceFeeFactor,
+        uint256 _withdrawFeeFactor,
+        uint256 _controllerFee,
+        uint256 _buyBackRate,
+        uint256 _slippageFactor
+    );
+
+    event SetGov(address _govAddress);
+    event SetOnlyGov(bool _onlyGov);
+    event SetUniRouterAddress(address _uniRouterAddress);
+    event SetBuyBackAddress(address _buyBackAddress);
+    event SetRewardsAddress(address _rewardsAddress);
 
     // Receives new deposits from user
     function deposit(address _userAddress, uint256 _wantAmt)
@@ -271,25 +287,25 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
 
         if (earnedAddress != token0Address) {
             // Swap half earned to token0
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _safeSwap(
+                uniRouterAddress,
                 earnedAmt.div(2),
-                0,
+                slippageFactor,
                 earnedToToken0Path,
                 address(this),
-                now + 600
+                now.add(600)
             );
         }
 
         if (earnedAddress != token1Address) {
             // Swap half earned to token1
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _safeSwap(
+                uniRouterAddress,
                 earnedAmt.div(2),
-                0,
+                slippageFactor,
                 earnedToToken1Path,
                 address(this),
-                now + 600
+                now.add(600)
             );
         }
 
@@ -337,13 +353,13 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
                 buyBackAmt
             );
 
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _safeSwap(
+                uniRouterAddress,
                 buyBackAmt,
-                0,
+                slippageFactor,
                 earnedToAUTOPath,
                 buyBackAddress,
-                now + 600
+                now.add(600)
             );
         }
 
@@ -379,13 +395,13 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
             );
 
             // Swap all dust tokens to earned tokens
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _safeSwap(
+                uniRouterAddress,
                 token0Amt,
-                0,
+                slippageFactor,
                 token0ToEarnedPath,
                 address(this),
-                now + 600
+                now.add(600)
             );
         }
 
@@ -398,13 +414,13 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
             );
 
             // Swap all dust tokens to earned tokens
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _safeSwap(
+                uniRouterAddress,
                 token1Amt,
-                0,
+                slippageFactor,
                 token1ToEarnedPath,
                 address(this),
-                now + 600
+                now.add(600)
             );
         }
     }
@@ -419,55 +435,67 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
         _unpause();
     }
 
-    function setEntranceFeeFactor(uint256 _entranceFeeFactor) public {
+    function setSettings(
+        uint256 _entranceFeeFactor,
+        uint256 _withdrawFeeFactor,
+        uint256 _controllerFee,
+        uint256 _buyBackRate,
+        uint256 _slippageFactor
+    ) public {
         require(msg.sender == govAddress, "!gov");
         require(_entranceFeeFactor >= entranceFeeFactorLL, "!safe - too low");
         require(_entranceFeeFactor <= entranceFeeFactorMax, "!safe - too high");
         entranceFeeFactor = _entranceFeeFactor;
-    }
 
-    function setWithdrawFeeFactor(uint256 _withdrawFeeFactor) public {
-        require(msg.sender == govAddress, "!gov");
         require(_withdrawFeeFactor >= withdrawFeeFactorLL, "!safe - too low");
         require(_withdrawFeeFactor <= withdrawFeeFactorMax, "!safe - too high");
         withdrawFeeFactor = _withdrawFeeFactor;
-    }
 
-    function setControllerFee(uint256 _controllerFee) public {
-        require(msg.sender == govAddress, "!gov");
         require(_controllerFee <= controllerFeeUL, "too high");
         controllerFee = _controllerFee;
-    }
 
-    function setbuyBackRate(uint256 _buyBackRate) public {
-        require(msg.sender == govAddress, "!gov");
         require(buyBackRate <= buyBackRateUL, "too high");
         buyBackRate = _buyBackRate;
+
+        slippageFactor = _slippageFactor;
+
+        emit SetSettings(
+            _entranceFeeFactor,
+            _withdrawFeeFactor,
+            _controllerFee,
+            _buyBackRate,
+            _slippageFactor
+        );
     }
 
     function setGov(address _govAddress) public {
         require(msg.sender == govAddress, "!gov");
         govAddress = _govAddress;
+        emit SetGov(_govAddress);
     }
 
     function setOnlyGov(bool _onlyGov) public {
         require(msg.sender == govAddress, "!gov");
         onlyGov = _onlyGov;
+        emit SetOnlyGov(_onlyGov);
     }
 
     function setUniRouterAddress(address _uniRouterAddress) public {
         require(msg.sender == govAddress, "!gov");
         uniRouterAddress = _uniRouterAddress;
+        emit SetUniRouterAddress(_uniRouterAddress);
     }
 
     function setBuyBackAddress(address _buyBackAddress) public {
         require(msg.sender == govAddress, "!gov");
         buyBackAddress = _buyBackAddress;
+        emit SetBuyBackAddress(_buyBackAddress);
     }
 
     function setRewardsAddress(address _rewardsAddress) public {
         require(msg.sender == govAddress, "!gov");
         rewardsAddress = _rewardsAddress;
+        emit SetRewardsAddress(_rewardsAddress);
     }
 
     function inCaseTokensGetStuck(
@@ -494,6 +522,28 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
         _wrapBNB();
     }
 
+    function _safeSwap(
+        address _uniRouterAddress,
+        uint256 _amountIn,
+        uint256 _slippageFactor,
+        address[] memory _path,
+        address _to,
+        uint256 _deadline
+    ) internal {
+        uint256[] memory amounts =
+            IPancakeRouter02(_uniRouterAddress).getAmountsOut(_amountIn, _path);
+        uint256 amountOut = amounts[amounts.length - 1];
+
+        IPancakeRouter02(_uniRouterAddress)
+            .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _amountIn,
+            amountOut.mul(_slippageFactor).div(1000),
+            _path,
+            _to,
+            _deadline
+        );
+    }
+
     // Claim trade mining rewards
     function noTimeLockFunc1() public {
         require(msg.sender == govAddress, "Not authorised");
@@ -506,7 +556,6 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
         uint256 MDXAmt = IERC20(MDXAddress).balanceOf(address(this));
         if (MDXAddress != earnedAddress && MDXAmt > 0) {
             IERC20(MDXAddress).safeIncreaseAllowance(uniRouterAddress, MDXAmt);
-
             // Swap all dust tokens to earned tokens
             IPancakeRouter02(uniRouterAddress)
                 .swapExactTokensForTokensSupportingFeeOnTransferTokens(
