@@ -140,6 +140,8 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
     uint256 public deleverAmtFactorSafe = 20; // 0.2% is the safe amt to delever for deleverageOnce()
     uint256 public constant deleverAmtFactorSafeUL = 500;
 
+    uint256 public slippageFactor = 950; // 5% default slippage tolerance
+
     address[] public venusToWantPath;
     address[] public earnedToAUTOPath;
 
@@ -161,10 +163,10 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
     uint256 public borrowBal = 0; // Cached want borrowed from venus
     uint256 public supplyBalTargeted = 0; // Cached targetted want supplied to venus to achieve desired leverage
     uint256 public supplyBalMin = 0;
+
     /**
      * @dev Events that the contract emits
      */
-    event StratRebalance(uint256 _borrowRate, uint256 _borrowDepth);
 
     constructor(
         address _govAddress,
@@ -206,6 +208,22 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
 
         IVenusDistribution(venusDistributionAddress).enterMarkets(venusMarkets);
     }
+
+    event SetSettings(
+        uint256 _entranceFeeFactor,
+        uint256 _withdrawFeeFactor,
+        uint256 _controllerFee,
+        uint256 _buyBackRate,
+        uint256 _slippageFactor,
+        uint256 _deleverAmtFactorMax,
+        uint256 _deleverAmtFactorSafe
+    );
+
+    event SetGov(address _govAddress);
+    event SetOnlyGov(bool _onlyGov);
+    event SetUniRouterAddress(address _uniRouterAddress);
+    event SetBuyBackAddress(address _buyBackAddress);
+    event SetRewardsAddress(address _rewardsAddress);
 
     function _supply(uint256 _amount) internal {
         if (wantIsWBNB) {
@@ -445,9 +463,10 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         earnedAmt = buyBack(earnedAmt);
 
         if (venusAddress != wantAddress) {
-            IPancakeRouter02(uniRouterAddress).swapExactTokensForTokens(
+            _safeSwap(
+                uniRouterAddress,
                 earnedAmt,
-                0,
+                slippageFactor,
                 venusToWantPath,
                 address(this),
                 now.add(600)
@@ -466,12 +485,13 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
 
         uint256 buyBackAmt = _earnedAmt.mul(buyBackRate).div(buyBackRateMax);
 
-        IPancakeRouter02(uniRouterAddress).swapExactTokensForTokens(
+        _safeSwap(
+            uniRouterAddress,
             buyBackAmt,
-            0,
+            slippageFactor,
             earnedToAUTOPath,
             buyBackAddress,
-            now + 600
+            now.add(600)
         );
 
         return _earnedAmt.sub(buyBackAmt);
@@ -594,68 +614,78 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-    function setEntranceFeeFactor(uint256 _entranceFeeFactor) public {
+    function setSettings(
+        uint256 _entranceFeeFactor,
+        uint256 _withdrawFeeFactor,
+        uint256 _controllerFee,
+        uint256 _buyBackRate,
+        uint256 _slippageFactor,
+        uint256 _deleverAmtFactorMax,
+        uint256 _deleverAmtFactorSafe
+    ) public {
         require(msg.sender == govAddress, "!gov");
         require(_entranceFeeFactor >= entranceFeeFactorLL, "!safe - too low");
         require(_entranceFeeFactor <= entranceFeeFactorMax, "!safe - too high");
         entranceFeeFactor = _entranceFeeFactor;
-    }
 
-    function setWithdrawFeeFactor(uint256 _withdrawFeeFactor) public {
-        require(msg.sender == govAddress, "!gov");
         require(_withdrawFeeFactor >= withdrawFeeFactorLL, "!safe - too low");
         require(_withdrawFeeFactor <= withdrawFeeFactorMax, "!safe - too high");
         withdrawFeeFactor = _withdrawFeeFactor;
-    }
 
-    function setControllerFee(uint256 _controllerFee) public {
-        require(msg.sender == govAddress, "!gov");
         require(_controllerFee <= controllerFeeUL, "too high");
         controllerFee = _controllerFee;
-    }
 
-    function setbuyBackRate(uint256 _buyBackRate) public {
-        require(msg.sender == govAddress, "!gov");
         require(buyBackRate <= buyBackRateUL, "too high");
         buyBackRate = _buyBackRate;
+
+        slippageFactor = _slippageFactor;
+
+        require(_deleverAmtFactorMax <= deleverAmtFactorMaxUL, "too high");
+        deleverAmtFactorMax = _deleverAmtFactorMax;
+
+        require(_deleverAmtFactorSafe <= deleverAmtFactorSafeUL, "too high");
+        deleverAmtFactorSafe = _deleverAmtFactorSafe;
+   
+        emit SetSettings(
+            _entranceFeeFactor,
+            _withdrawFeeFactor,
+            _controllerFee,
+            _buyBackRate,
+            _slippageFactor,
+            _deleverAmtFactorMax,
+            _deleverAmtFactorSafe
+        );
     }
 
     function setGov(address _govAddress) public {
         require(msg.sender == govAddress, "!gov");
         govAddress = _govAddress;
+        emit SetGov(_govAddress);
     }
 
     function setOnlyGov(bool _onlyGov) public {
         require(msg.sender == govAddress, "!gov");
         onlyGov = _onlyGov;
+        emit SetOnlyGov(_onlyGov);
     }
 
     function setUniRouterAddress(address _uniRouterAddress) public {
         require(msg.sender == govAddress, "!gov");
         uniRouterAddress = _uniRouterAddress;
         _resetAllowances();
+        emit SetUniRouterAddress(_uniRouterAddress);
     }
 
     function setBuyBackAddress(address _buyBackAddress) public {
         require(msg.sender == govAddress, "!gov");
         buyBackAddress = _buyBackAddress;
+        emit SetBuyBackAddress(_buyBackAddress);
     }
 
     function setRewardsAddress(address _rewardsAddress) public {
         require(msg.sender == govAddress, "!gov");
         rewardsAddress = _rewardsAddress;
-    }
-
-    function setDeleverAmtFactorMax(uint256 _deleverAmtFactorMax) public {
-        require(msg.sender == govAddress, "!gov");
-        require(_deleverAmtFactorMax <= deleverAmtFactorMaxUL, "too high");
-        deleverAmtFactorMax = _deleverAmtFactorMax;
-    }
-
-    function setDeleverAmtFactorSafe(uint256 _deleverAmtFactorSafe) public {
-        require(msg.sender == govAddress, "!gov");
-        require(_deleverAmtFactorSafe <= deleverAmtFactorSafeUL, "too high");
-        deleverAmtFactorSafe = _deleverAmtFactorSafe;
+        emit SetRewardsAddress(_rewardsAddress);
     }
 
     function inCaseTokensGetStuck(
@@ -696,6 +726,27 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         require(msg.sender == govAddress, "!gov");
         require(wantIsWBNB, "!wantIsWBNB");
         _wrapBNB();
+    }
+
+    function _safeSwap(
+        address _uniRouterAddress,
+        uint256 _amountIn,
+        uint256 _slippageFactor,
+        address[] memory _path,
+        address _to,
+        uint256 _deadline
+    ) internal {
+        uint256[] memory amounts =
+            IPancakeRouter02(_uniRouterAddress).getAmountsOut(_amountIn, _path);
+        uint256 amountOut = amounts[amounts.length - 1];
+
+        IPancakeRouter02(_uniRouterAddress).swapExactTokensForTokens(
+            _amountIn,
+            amountOut.mul(_slippageFactor).div(1000),
+            _path,
+            _to,
+            _deadline
+        );
     }
 
     receive() external payable {}
