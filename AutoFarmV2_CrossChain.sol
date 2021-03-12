@@ -63,13 +63,14 @@ contract AutoFarmV2_CrossChain is Ownable, ReentrancyGuard {
     mapping(uint256 => mapping(address => UserInfo)) public userInfo; // Info of each user that stakes LP tokens.
     uint256 public totalAllocPoint = 1; // Total allocation points. Must be the sum of all allocation points in all pools.
 
+    event Add(
+        uint256 _allocPoint,
+        IERC20 _want,
+        bool _withUpdate,
+        address _strat
+    );
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(
-        address indexed user,
-        uint256 indexed pid,
-        uint256 amount
-    );
 
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
@@ -84,10 +85,6 @@ contract AutoFarmV2_CrossChain is Ownable, ReentrancyGuard {
         bool _withUpdate,
         address _strat
     ) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(
             PoolInfo({
@@ -98,21 +95,8 @@ contract AutoFarmV2_CrossChain is Ownable, ReentrancyGuard {
                 strat: _strat
             })
         );
-    }
 
-    // Update the given pool's AUTO allocation point. Can only be called by the owner.
-    function set(
-        uint256 _pid,
-        uint256 _allocPoint,
-        bool _withUpdate
-    ) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
-            _allocPoint
-        );
-        poolInfo[_pid].allocPoint = _allocPoint;
+        emit Add(_allocPoint, _want, _withUpdate, _strat);
     }
 
     // View function to see staked Want tokens on frontend.
@@ -133,30 +117,8 @@ contract AutoFarmV2_CrossChain is Ownable, ReentrancyGuard {
         return user.shares.mul(wantLockedTotal).div(sharesTotal);
     }
 
-    // Update reward variables for all pools. Be careful of gas spending!
-    function massUpdatePools() public {
-        uint256 length = poolInfo.length;
-        for (uint256 pid = 0; pid < length; ++pid) {
-            updatePool(pid);
-        }
-    }
-
-    // Update reward variables of the given pool to be up-to-date.
-    function updatePool(uint256 _pid) public {
-        PoolInfo storage pool = poolInfo[_pid];
-
-        uint256 sharesTotal = IStrategy(pool.strat).sharesTotal();
-        if (sharesTotal == 0) {
-            pool.lastRewardBlock = block.number;
-            return;
-        }
-
-        pool.lastRewardBlock = block.number;
-    }
-
     // Want tokens moved from user -> AUTOFarm (AUTO allocation) -> Strat (compounding)
     function deposit(uint256 _pid, uint256 _wantAmt) public nonReentrant {
-        updatePool(_pid);
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
@@ -178,8 +140,6 @@ contract AutoFarmV2_CrossChain is Ownable, ReentrancyGuard {
 
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _pid, uint256 _wantAmt) public nonReentrant {
-        updatePool(_pid);
-
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
@@ -212,27 +172,6 @@ contract AutoFarmV2_CrossChain is Ownable, ReentrancyGuard {
             pool.want.safeTransfer(address(msg.sender), _wantAmt);
         }
         emit Withdraw(msg.sender, _pid, _wantAmt);
-    }
-
-    function withdrawAll(uint256 _pid) public nonReentrant {
-        withdraw(_pid, uint256(-1));
-    }
-
-    // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function emergencyWithdraw(uint256 _pid) public nonReentrant {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-
-        uint256 wantLockedTotal =
-            IStrategy(poolInfo[_pid].strat).wantLockedTotal();
-        uint256 sharesTotal = IStrategy(poolInfo[_pid].strat).sharesTotal();
-        uint256 amount = user.shares.mul(wantLockedTotal).div(sharesTotal);
-
-        IStrategy(poolInfo[_pid].strat).withdraw(msg.sender, amount);
-
-        pool.want.safeTransfer(address(msg.sender), amount);
-        emit EmergencyWithdraw(msg.sender, _pid, amount);
-        user.shares = 0;
     }
 
     function inCaseTokensGetStuck(address _token, uint256 _amount)
