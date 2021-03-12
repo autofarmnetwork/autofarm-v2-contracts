@@ -557,13 +557,13 @@ contract StratX2_MDEX is Ownable, ReentrancyGuard, Pausable {
         if (MDXAddress != earnedAddress && MDXAmt > 0) {
             IERC20(MDXAddress).safeIncreaseAllowance(uniRouterAddress, MDXAmt);
             // Swap all dust tokens to earned tokens
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _safeSwap(
+                uniRouterAddress,
                 MDXAmt,
-                0,
+                slippageFactor,
                 MDXToEarnedPath,
                 address(this),
-                now + 60
+                now.add(600)
             );
         }
     }
