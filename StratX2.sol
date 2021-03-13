@@ -101,6 +101,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         public
         virtual
         onlyOwner
+        nonReentrant
         whenNotPaused
         returns (uint256)
     {
