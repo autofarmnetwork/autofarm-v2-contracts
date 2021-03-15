@@ -75,6 +75,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant withdrawFeeFactorLL = 9950; // 0.5% is the max entrance fee settable. LL = lowerlimit
 
     uint256 public slippageFactor = 950; // 5% default slippage tolerance
+    uint256 public constant slippageFactorUL = 995;
 
     address[] public earnedToAUTOPath;
     address[] public earnedToToken0Path;
@@ -172,7 +173,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         if (withdrawFeeFactor < withdrawFeeFactorMax) {
             _wantAmt = _wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax);
         }
-        
+
         if (isAutoComp) {
             _unfarm(_wantAmt);
         }
@@ -390,20 +391,21 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         uint256 _slippageFactor
     ) public virtual {
         require(msg.sender == govAddress, "!gov");
-        require(_entranceFeeFactor >= entranceFeeFactorLL, "!safe - too low");
-        require(_entranceFeeFactor <= entranceFeeFactorMax, "!safe - too high");
+        require(_entranceFeeFactor >= entranceFeeFactorLL, "_entranceFeeFactor too low");
+        require(_entranceFeeFactor <= entranceFeeFactorMax, "_entranceFeeFactor too high");
         entranceFeeFactor = _entranceFeeFactor;
 
-        require(_withdrawFeeFactor >= withdrawFeeFactorLL, "!safe - too low");
-        require(_withdrawFeeFactor <= withdrawFeeFactorMax, "!safe - too high");
+        require(_withdrawFeeFactor >= withdrawFeeFactorLL, "_withdrawFeeFactor too low");
+        require(_withdrawFeeFactor <= withdrawFeeFactorMax, "_withdrawFeeFactor too high");
         withdrawFeeFactor = _withdrawFeeFactor;
 
-        require(_controllerFee <= controllerFeeUL, "too high");
+        require(_controllerFee <= controllerFeeUL, "_controllerFee too high");
         controllerFee = _controllerFee;
 
-        require(_buyBackRate <= buyBackRateUL, "too high");
+        require(_buyBackRate <= buyBackRateUL, "_buyBackRate too high");
         buyBackRate = _buyBackRate;
 
+        require(_slippageFactor <= slippageFactorUL, "_slippageFactor too high");
         slippageFactor = _slippageFactor;
 
         emit SetSettings(
