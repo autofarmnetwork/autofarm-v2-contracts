@@ -226,6 +226,11 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
     event SetBuyBackAddress(address _buyBackAddress);
     event SetRewardsAddress(address _rewardsAddress);
 
+    modifier onlyAllowGov() {
+        require(msg.sender == govAddress, "!gov");
+        _;
+    }
+
     function _supply(uint256 _amount) internal {
         if (wantIsWBNB) {
             IVBNB(vTokenAddress).mint{value: _amount}();
@@ -438,9 +443,10 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
      * @param _borrowRate percent to borrow on each leverage level.
      * @param _borrowDepth how many levels to leverage the funds.
      */
-    function rebalance(uint256 _borrowRate, uint256 _borrowDepth) external {
-        require(msg.sender == govAddress, "!gov");
-
+    function rebalance(uint256 _borrowRate, uint256 _borrowDepth)
+        external
+        onlyAllowGov
+    {
         require(_borrowRate <= BORROW_RATE_MAX, "!rate");
         require(_borrowDepth <= BORROW_DEPTH_MAX, "!depth");
 
@@ -538,9 +544,11 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         }
 
         if (withdrawFeeFactor < withdrawFeeFactorMax) {
-            _wantAmt = _wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax);
+            _wantAmt = _wantAmt.mul(withdrawFeeFactor).div(
+                withdrawFeeFactorMax
+            );
         }
-        
+
         IERC20(wantAddress).safeTransfer(autoFarmAddress, _wantAmt);
 
         _farm(true);
@@ -551,16 +559,14 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
     /**
      * @dev Pauses the strat.
      */
-    function pause() public {
-        require(msg.sender == govAddress, "!gov");
+    function pause() public onlyAllowGov {
         _pause();
     }
 
     /**
      * @dev Unpauses the strat.
      */
-    function unpause() external {
-        require(msg.sender == govAddress, "!gov");
+    function unpause() external onlyAllowGov {
         _unpause();
         _resetAllowances();
     }
@@ -587,8 +593,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-    function resetAllowances() public {
-        require(msg.sender == govAddress, "!gov");
+    function resetAllowances() public onlyAllowGov {
         _resetAllowances();
     }
 
@@ -625,14 +630,25 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         uint256 _slippageFactor,
         uint256 _deleverAmtFactorMax,
         uint256 _deleverAmtFactorSafe
-    ) public {
-        require(msg.sender == govAddress, "!gov");
-          require(_entranceFeeFactor >= entranceFeeFactorLL, "_entranceFeeFactor too low");
-        require(_entranceFeeFactor <= entranceFeeFactorMax, "_entranceFeeFactor too high");
+    ) public onlyAllowGov {
+        require(
+            _entranceFeeFactor >= entranceFeeFactorLL,
+            "_entranceFeeFactor too low"
+        );
+        require(
+            _entranceFeeFactor <= entranceFeeFactorMax,
+            "_entranceFeeFactor too high"
+        );
         entranceFeeFactor = _entranceFeeFactor;
 
-        require(_withdrawFeeFactor >= withdrawFeeFactorLL, "_withdrawFeeFactor too low");
-        require(_withdrawFeeFactor <= withdrawFeeFactorMax, "_withdrawFeeFactor too high");
+        require(
+            _withdrawFeeFactor >= withdrawFeeFactorLL,
+            "_withdrawFeeFactor too low"
+        );
+        require(
+            _withdrawFeeFactor <= withdrawFeeFactorMax,
+            "_withdrawFeeFactor too high"
+        );
         withdrawFeeFactor = _withdrawFeeFactor;
 
         require(_controllerFee <= controllerFeeUL, "_controllerFee too high");
@@ -641,16 +657,24 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         require(_buyBackRate <= buyBackRateUL, "_buyBackRate too high");
         buyBackRate = _buyBackRate;
 
-        require(_slippageFactor <= slippageFactorUL, "_slippageFactor too high");
+        require(
+            _slippageFactor <= slippageFactorUL,
+            "_slippageFactor too high"
+        );
         slippageFactor = _slippageFactor;
 
-        require(_deleverAmtFactorMax <= deleverAmtFactorMaxUL, "_deleverAmtFactorMax too high");
+        require(
+            _deleverAmtFactorMax <= deleverAmtFactorMaxUL,
+            "_deleverAmtFactorMax too high"
+        );
         deleverAmtFactorMax = _deleverAmtFactorMax;
 
-        require(_deleverAmtFactorSafe <= deleverAmtFactorSafeUL, "_deleverAmtFactorSafe too high");
+        require(
+            _deleverAmtFactorSafe <= deleverAmtFactorSafeUL,
+            "_deleverAmtFactorSafe too high"
+        );
         deleverAmtFactorSafe = _deleverAmtFactorSafe;
-   
-   
+
         emit SetSettings(
             _entranceFeeFactor,
             _withdrawFeeFactor,
@@ -662,33 +686,31 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         );
     }
 
-    function setGov(address _govAddress) public {
-        require(msg.sender == govAddress, "!gov");
+    function setGov(address _govAddress) public onlyAllowGov {
         govAddress = _govAddress;
         emit SetGov(_govAddress);
     }
 
-    function setOnlyGov(bool _onlyGov) public {
-        require(msg.sender == govAddress, "!gov");
+    function setOnlyGov(bool _onlyGov) public onlyAllowGov {
         onlyGov = _onlyGov;
         emit SetOnlyGov(_onlyGov);
     }
 
-    function setUniRouterAddress(address _uniRouterAddress) public {
-        require(msg.sender == govAddress, "!gov");
+    function setUniRouterAddress(address _uniRouterAddress)
+        public
+        onlyAllowGov
+    {
         uniRouterAddress = _uniRouterAddress;
         _resetAllowances();
         emit SetUniRouterAddress(_uniRouterAddress);
     }
 
-    function setBuyBackAddress(address _buyBackAddress) public {
-        require(msg.sender == govAddress, "!gov");
+    function setBuyBackAddress(address _buyBackAddress) public onlyAllowGov {
         buyBackAddress = _buyBackAddress;
         emit SetBuyBackAddress(_buyBackAddress);
     }
 
-    function setRewardsAddress(address _rewardsAddress) public {
-        require(msg.sender == govAddress, "!gov");
+    function setRewardsAddress(address _rewardsAddress) public onlyAllowGov {
         rewardsAddress = _rewardsAddress;
         emit SetRewardsAddress(_rewardsAddress);
     }
@@ -697,8 +719,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         address _token,
         uint256 _amount,
         address _to
-    ) public {
-        require(msg.sender == govAddress, "!gov");
+    ) public onlyAllowGov {
         require(_token != earnedAddress, "!safe");
         require(_token != wantAddress, "!safe");
         require(_token != vTokenAddress, "!safe");
@@ -727,8 +748,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
      * In case we do (eg. Venus returns all users' BNB to this contract or for any other reason),
      * We can wrap all BNB, allowing users to withdraw() as per normal.
      */
-    function wrapBNB() public {
-        require(msg.sender == govAddress, "!gov");
+    function wrapBNB() public onlyAllowGov {
         require(wantIsWBNB, "!wantIsWBNB");
         _wrapBNB();
     }
