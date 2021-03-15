@@ -97,6 +97,11 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     event SetBuyBackAddress(address _buyBackAddress);
     event SetRewardsAddress(address _rewardsAddress);
 
+    modifier onlyAllowGov() {
+        require(msg.sender == govAddress, "!gov");
+        _;
+    }
+
     // Receives new deposits from user
     function deposit(address _userAddress, uint256 _wantAmt)
         public
@@ -171,7 +176,9 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         sharesTotal = sharesTotal.sub(sharesRemoved);
 
         if (withdrawFeeFactor < withdrawFeeFactorMax) {
-            _wantAmt = _wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax);
+            _wantAmt = _wantAmt.mul(withdrawFeeFactor).div(
+                withdrawFeeFactorMax
+            );
         }
 
         if (isAutoComp) {
@@ -373,13 +380,11 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-    function pause() public virtual {
-        require(msg.sender == govAddress, "!gov");
+    function pause() public virtual onlyAllowGov {
         _pause();
     }
 
-    function unpause() public virtual {
-        require(msg.sender == govAddress, "!gov");
+    function unpause() public virtual onlyAllowGov {
         _unpause();
     }
 
@@ -389,14 +394,25 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         uint256 _controllerFee,
         uint256 _buyBackRate,
         uint256 _slippageFactor
-    ) public virtual {
-        require(msg.sender == govAddress, "!gov");
-        require(_entranceFeeFactor >= entranceFeeFactorLL, "_entranceFeeFactor too low");
-        require(_entranceFeeFactor <= entranceFeeFactorMax, "_entranceFeeFactor too high");
+    ) public virtual onlyAllowGov {
+        require(
+            _entranceFeeFactor >= entranceFeeFactorLL,
+            "_entranceFeeFactor too low"
+        );
+        require(
+            _entranceFeeFactor <= entranceFeeFactorMax,
+            "_entranceFeeFactor too high"
+        );
         entranceFeeFactor = _entranceFeeFactor;
 
-        require(_withdrawFeeFactor >= withdrawFeeFactorLL, "_withdrawFeeFactor too low");
-        require(_withdrawFeeFactor <= withdrawFeeFactorMax, "_withdrawFeeFactor too high");
+        require(
+            _withdrawFeeFactor >= withdrawFeeFactorLL,
+            "_withdrawFeeFactor too low"
+        );
+        require(
+            _withdrawFeeFactor <= withdrawFeeFactorMax,
+            "_withdrawFeeFactor too high"
+        );
         withdrawFeeFactor = _withdrawFeeFactor;
 
         require(_controllerFee <= controllerFeeUL, "_controllerFee too high");
@@ -405,7 +421,10 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         require(_buyBackRate <= buyBackRateUL, "_buyBackRate too high");
         buyBackRate = _buyBackRate;
 
-        require(_slippageFactor <= slippageFactorUL, "_slippageFactor too high");
+        require(
+            _slippageFactor <= slippageFactorUL,
+            "_slippageFactor too high"
+        );
         slippageFactor = _slippageFactor;
 
         emit SetSettings(
@@ -417,32 +436,39 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         );
     }
 
-    function setGov(address _govAddress) public virtual {
-        require(msg.sender == govAddress, "!gov");
+    function setGov(address _govAddress) public virtual onlyAllowGov {
         govAddress = _govAddress;
         emit SetGov(_govAddress);
     }
 
-    function setOnlyGov(bool _onlyGov) public virtual {
-        require(msg.sender == govAddress, "!gov");
+    function setOnlyGov(bool _onlyGov) public virtual onlyAllowGov {
         onlyGov = _onlyGov;
         emit SetOnlyGov(_onlyGov);
     }
 
-    function setUniRouterAddress(address _uniRouterAddress) public virtual {
-        require(msg.sender == govAddress, "!gov");
+    function setUniRouterAddress(address _uniRouterAddress)
+        public
+        virtual
+        onlyAllowGov
+    {
         uniRouterAddress = _uniRouterAddress;
         emit SetUniRouterAddress(_uniRouterAddress);
     }
 
-    function setBuyBackAddress(address _buyBackAddress) public virtual {
-        require(msg.sender == govAddress, "!gov");
+    function setBuyBackAddress(address _buyBackAddress)
+        public
+        virtual
+        onlyAllowGov
+    {
         buyBackAddress = _buyBackAddress;
         emit SetBuyBackAddress(_buyBackAddress);
     }
 
-    function setRewardsAddress(address _rewardsAddress) public virtual {
-        require(msg.sender == govAddress, "!gov");
+    function setRewardsAddress(address _rewardsAddress)
+        public
+        virtual
+        onlyAllowGov
+    {
         rewardsAddress = _rewardsAddress;
         emit SetRewardsAddress(_rewardsAddress);
     }
@@ -451,8 +477,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         address _token,
         uint256 _amount,
         address _to
-    ) public virtual {
-        require(msg.sender == govAddress, "!gov");
+    ) public virtual onlyAllowGov {
         require(_token != earnedAddress, "!safe");
         require(_token != wantAddress, "!safe");
         IERC20(_token).safeTransfer(_to, _amount);
@@ -466,8 +491,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-    function wrapBNB() public virtual {
-        require(msg.sender == govAddress, "Not authorised");
+    function wrapBNB() public virtual onlyAllowGov {
         _wrapBNB();
     }
 
