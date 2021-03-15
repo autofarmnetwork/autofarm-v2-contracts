@@ -536,8 +536,10 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
             _wantAmt = wantBal;
         }
 
-        _wantAmt = _wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax);
-
+        if (withdrawFeeFactor < withdrawFeeFactorMax) {
+            _wantAmt = _wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax);
+        }
+        
         IERC20(wantAddress).safeTransfer(autoFarmAddress, _wantAmt);
 
         _farm(true);
