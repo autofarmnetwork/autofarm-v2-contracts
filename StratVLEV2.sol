@@ -141,6 +141,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant deleverAmtFactorSafeUL = 500;
 
     uint256 public slippageFactor = 950; // 5% default slippage tolerance
+    uint256 public constant slippageFactorUL = 995;
 
     address[] public venusToWantPath;
     address[] public earnedToAUTOPath;
