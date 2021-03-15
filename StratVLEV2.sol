@@ -476,7 +476,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
                 slippageFactor,
                 venusToWantPath,
                 address(this),
-                now.add(600)
+                block.timestamp.add(600)
             );
         }
 
@@ -498,7 +498,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
             slippageFactor,
             earnedToAUTOPath,
             buyBackAddress,
-            now.add(600)
+            block.timestamp.add(600)
         );
 
         return _earnedAmt.sub(buyBackAmt);
