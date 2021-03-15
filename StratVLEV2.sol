@@ -626,27 +626,29 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         uint256 _deleverAmtFactorSafe
     ) public {
         require(msg.sender == govAddress, "!gov");
-        require(_entranceFeeFactor >= entranceFeeFactorLL, "!safe - too low");
-        require(_entranceFeeFactor <= entranceFeeFactorMax, "!safe - too high");
+          require(_entranceFeeFactor >= entranceFeeFactorLL, "_entranceFeeFactor too low");
+        require(_entranceFeeFactor <= entranceFeeFactorMax, "_entranceFeeFactor too high");
         entranceFeeFactor = _entranceFeeFactor;
 
-        require(_withdrawFeeFactor >= withdrawFeeFactorLL, "!safe - too low");
-        require(_withdrawFeeFactor <= withdrawFeeFactorMax, "!safe - too high");
+        require(_withdrawFeeFactor >= withdrawFeeFactorLL, "_withdrawFeeFactor too low");
+        require(_withdrawFeeFactor <= withdrawFeeFactorMax, "_withdrawFeeFactor too high");
         withdrawFeeFactor = _withdrawFeeFactor;
 
-        require(_controllerFee <= controllerFeeUL, "too high");
+        require(_controllerFee <= controllerFeeUL, "_controllerFee too high");
         controllerFee = _controllerFee;
 
-        require(_buyBackRate <= buyBackRateUL, "too high");
+        require(_buyBackRate <= buyBackRateUL, "_buyBackRate too high");
         buyBackRate = _buyBackRate;
 
+        require(_slippageFactor <= slippageFactorUL, "_slippageFactor too high");
         slippageFactor = _slippageFactor;
 
-        require(_deleverAmtFactorMax <= deleverAmtFactorMaxUL, "too high");
+        require(_deleverAmtFactorMax <= deleverAmtFactorMaxUL, "_deleverAmtFactorMax too high");
         deleverAmtFactorMax = _deleverAmtFactorMax;
 
-        require(_deleverAmtFactorSafe <= deleverAmtFactorSafeUL, "too high");
+        require(_deleverAmtFactorSafe <= deleverAmtFactorSafeUL, "_deleverAmtFactorSafe too high");
         deleverAmtFactorSafe = _deleverAmtFactorSafe;
+   
    
         emit SetSettings(
             _entranceFeeFactor,
