@@ -244,7 +244,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
                 slippageFactor,
                 earnedToToken0Path,
                 address(this),
-                now.add(600)
+                block.timestamp.add(600)
             );
         }
 
@@ -256,7 +256,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
                 slippageFactor,
                 earnedToToken1Path,
                 address(this),
-                now.add(600)
+                block.timestamp.add(600)
             );
         }
 
@@ -280,7 +280,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
                 0,
                 0,
                 address(this),
-                now + 600
+                block.timestamp.add(600)
             );
         }
 
@@ -310,7 +310,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
                 slippageFactor,
                 earnedToAUTOPath,
                 buyBackAddress,
-                now.add(600)
+                block.timestamp.add(600)
             );
         }
 
@@ -356,7 +356,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
                 slippageFactor,
                 token0ToEarnedPath,
                 address(this),
-                now.add(600)
+                block.timestamp.add(600)
             );
         }
 
@@ -375,7 +375,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
                 slippageFactor,
                 token1ToEarnedPath,
                 address(this),
-                now.add(600)
+                block.timestamp.add(600)
             );
         }
     }
