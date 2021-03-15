@@ -169,8 +169,10 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
         }
         sharesTotal = sharesTotal.sub(sharesRemoved);
 
-        _wantAmt = _wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax);
-
+        if (withdrawFeeFactor < withdrawFeeFactorMax) {
+            _wantAmt = _wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax);
+        }
+        
         if (isAutoComp) {
             _unfarm(_wantAmt);
         }
