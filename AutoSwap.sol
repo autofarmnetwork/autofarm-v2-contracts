@@ -62,21 +62,72 @@ contract AutoSwap is Ownable, Pausable {
         referrerFeeRate = _referrerFeeRate;
     }
 
-    function changeFeeRate(uint256 _feeRate) public onlyOwner {
-        uint256 oldFeeRate = feeRate;
-        require(_feeRate <= 10000, "!safe - too high");
-        feeRate = _feeRate;
-        emit FeeRateChanged(oldFeeRate, _feeRate);
+    function swap(
+        IERC20 inToken,
+        IERC20 outToken,
+        uint256 inAmount,
+        uint256 minOutAmount,
+        uint256 guaranteedAmount,
+        address payable referrer,
+        CallStruct[] calldata calls
+    ) public payable whenNotPaused returns (uint256 outAmount) {
+        // Initial checks
+        require(minOutAmount > 0, "!(minOutAmount > 0)");
+        require(calls.length > 0, "!(calls.length > 0)");
+        require(
+            (msg.value != 0) == inToken.isETH(),
+            "msg.value should be used only for ETH swap"
+        );
+
+        // Transfer inToken to address(this)
+        if (!inToken.isETH()) {
+            inToken.safeTransferFrom(msg.sender, address(this), inAmount);
+        }
+
+        // Execute swaps
+        for (uint256 i = 0; i < calls.length; i++) {
+            calls[i].target.call{value: calls[i].value}(calls[i].data);
+        }
+
+        // Transfer inToken dust (if any) to user
+        inToken.universalTransfer(
+            msg.sender,
+            inToken.universalBalanceOf(address(this))
+        );
+
+        // Handle fees
+        outAmount = outToken.universalBalanceOf(address(this));
+        uint256 fee;
+        uint256 referrerFee;
+        (outAmount, fee, referrerFee) = _handleFees(
+            outToken,
+            outAmount,
+            guaranteedAmount,
+            referrer
+        );
+
+        // Closing checks
+        require(
+            outAmount >= minOutAmount,
+            "Return amount less than the minimum required amount"
+        );
+
+        // Transfer outToken to user
+        outToken.universalTransfer(msg.sender, outAmount);
+
+        emit Order(msg.sender, inToken, outToken, inAmount, outAmount);
+        emit Swapped(
+            inToken,
+            outToken,
+            referrer,
+            inAmount,
+            outAmount,
+            fee,
+            referrerFee
+        );
     }
 
-    function changeReferrerFeeRate(uint256 _referrerFeeRate) public onlyOwner {
-        uint256 oldReferrerFeeRate = referrerFeeRate;
-        require(_referrerFeeRate <= 10000, "!safe - too high");
-        referrerFeeRate = _referrerFeeRate;
-        emit ReferrerFeeRateChanged(oldReferrerFeeRate, _referrerFeeRate);
-    }
-
-    function handleFees(
+    function _handleFees(
         IERC20 toToken,
         uint256 outAmount,
         uint256 guaranteedAmount,
@@ -116,68 +167,25 @@ contract AutoSwap is Ownable, Pausable {
         return (outAmount, fee, referrerFee);
     }
 
-    function swap(
-        IERC20 inToken,
-        IERC20 outToken,
-        uint256 inAmount,
-        uint256 minOutAmount,
-        uint256 guaranteedAmount,
-        address payable referrer,
-        CallStruct[] calldata calls
-    ) public payable whenNotPaused returns (uint256 outAmount) {
-        // Initial checks
-        require(minOutAmount > 0, "!(minOutAmount > 0)");
-        require(calls.length > 0, "!(calls.length > 0)");
-        require(
-            (msg.value != 0) == inToken.isETH(),
-            "msg.value should be used only for ETH swap"
-        );
+    function changeFeeRate(uint256 _feeRate) public onlyOwner {
+        uint256 oldFeeRate = feeRate;
+        require(_feeRate <= 10000, "!safe - too high");
+        feeRate = _feeRate;
+        emit FeeRateChanged(oldFeeRate, _feeRate);
+    }
 
-        // Transfer inToken to address(this)
-        if (!inToken.isETH()) {
-            inToken.safeTransferFrom(msg.sender, address(this), inAmount);
-        }
+    function changeReferrerFeeRate(uint256 _referrerFeeRate) public onlyOwner {
+        uint256 oldReferrerFeeRate = referrerFeeRate;
+        require(_referrerFeeRate <= 10000, "!safe - too high");
+        referrerFeeRate = _referrerFeeRate;
+        emit ReferrerFeeRateChanged(oldReferrerFeeRate, _referrerFeeRate);
+    }
 
-        // Execute swaps
-        for (uint256 i = 0; i < calls.length; i++) {
-            calls[i].target.call{value: calls[i].value}(calls[i].data);
-        }
+    function pause() public onlyOwner {
+        _pause();
+    }
 
-        // Transfer inToken dust (if any) to user
-        inToken.universalTransfer(
-            msg.sender,
-            inToken.universalBalanceOf(address(this))
-        );
-
-        // Handle fees
-        outAmount = outToken.universalBalanceOf(address(this));
-        uint256 fee;
-        uint256 referrerFee;
-        (outAmount, fee, referrerFee) = handleFees(
-            outToken,
-            outAmount,
-            guaranteedAmount,
-            referrer
-        );
-
-        // Closing checks
-        require(
-            outAmount >= minOutAmount,
-            "Return amount less than the minimum required amount"
-        );
-
-        // Transfer outToken to user
-        outToken.universalTransfer(msg.sender, outAmount);
-
-        emit Order(msg.sender, inToken, outToken, inAmount, outAmount);
-        emit Swapped(
-            inToken,
-            outToken,
-            referrer,
-            inAmount,
-            outAmount,
-            fee,
-            referrerFee
-        );
+    function unpause() public onlyOwner {
+        _unpause();
     }
 }
