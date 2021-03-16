@@ -11,7 +11,9 @@ import "./helpers/Pausable.sol";
 
 import "./libraries/UniversalERC20.sol";
 
-contract AutoSwap is Ownable, Pausable {
+import "./helpers/Whitelist.sol";
+
+contract AutoSwap is Ownable, Pausable, Whitelist {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using UniversalERC20 for IERC20;
@@ -86,6 +88,7 @@ contract AutoSwap is Ownable, Pausable {
 
         // Execute swaps
         for (uint256 i = 0; i < calls.length; i++) {
+            require(isMember(calls[i].target), "!whitelisted");
             calls[i].target.call{value: calls[i].value}(calls[i].data);
         }
 
