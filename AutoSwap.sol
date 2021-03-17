@@ -49,6 +49,7 @@ contract AutoSwap is Ownable, Pausable, Whitelist {
     );
 
     struct CallStruct {
+        address spenderIfIsApproval;
         address target;
         uint256 value;
         bytes data;
@@ -88,8 +89,14 @@ contract AutoSwap is Ownable, Pausable, Whitelist {
 
         // Execute swaps
         for (uint256 i = 0; i < calls.length; i++) {
-            require(isMember(calls[i].target), "!whitelisted");
-            calls[i].target.call{value: calls[i].value}(calls[i].data);
+            if (calls[i].spenderIfIsApproval != address(0)) {
+                // If call is to approve spending of a token
+                _resetAllowances(calls[i].target, calls[i].spenderIfIsApproval);
+            } else {
+                // If call is a swap
+                require(isMember(calls[i].target), "!whitelisted");
+                calls[i].target.call{value: calls[i].value}(calls[i].data);
+            }
         }
 
         // Transfer inToken dust (if any) to user
@@ -168,6 +175,13 @@ contract AutoSwap is Ownable, Pausable, Whitelist {
         }
 
         return (outAmount, fee, referrerFee);
+    }
+
+    function _resetAllowances(address tokenAddress, address spenderAddress)
+        internal
+    {
+        IERC20(tokenAddress).safeApprove(spenderAddress, uint256(0));
+        IERC20(tokenAddress).safeIncreaseAllowance(spenderAddress, uint256(-1));
     }
 
     function changeFeeRate(uint256 _feeRate) public onlyOwner {
