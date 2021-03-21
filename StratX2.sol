@@ -141,6 +141,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     }
 
     function _farm() internal virtual {
+        require(isAutoComp, "!isAutoComp");
         uint256 wantAmt = IERC20(wantAddress).balanceOf(address(this));
         wantLockedTotal = wantLockedTotal.add(wantAmt);
         IERC20(wantAddress).safeIncreaseAllowance(farmContractAddress, wantAmt);
