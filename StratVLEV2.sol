@@ -179,6 +179,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         address[] memory _venusToWantPath,
         address[] memory _earnedToAUTOPath,
         uint256 _controllerFee,
+        address _rewardsAddress,
         uint256 _buyBackRate,
         uint256 _entranceFeeFactor,
         uint256 _withdrawFeeFactor
@@ -195,6 +196,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         earnedToAUTOPath = _earnedToAUTOPath;
 
         controllerFee = _controllerFee;
+        rewardsAddress = _rewardsAddress;
         buyBackRate = _buyBackRate;
         entranceFeeFactor = _entranceFeeFactor;
         withdrawFeeFactor = _withdrawFeeFactor;
