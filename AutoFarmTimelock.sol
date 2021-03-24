@@ -11,6 +11,8 @@ import "./libraries/SafeERC20.sol";
 
 import "./helpers/AccessControl.sol";
 
+import "./helpers/ReentrancyGuard.sol";
+
 /**
  * @dev AutoFarm functions that do not require less than the min timelock
  */
@@ -377,7 +379,7 @@ contract TimelockController is AccessControl {
         bytes calldata data,
         bytes32 predecessor,
         bytes32 salt
-    ) public payable virtual onlyRole(EXECUTOR_ROLE) {
+    ) public payable virtual onlyRole(EXECUTOR_ROLE) nonReentrant {
         bytes32 id = hashOperation(target, value, data, predecessor, salt);
         _beforeCall(predecessor);
         _call(id, 0, target, value, data);
@@ -393,13 +395,13 @@ contract TimelockController is AccessControl {
      *
      * - the caller must have the 'executor' role.
      */
-    function executeBatch(
+    function executeBatch (
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata datas,
         bytes32 predecessor,
         bytes32 salt
-    ) public payable virtual onlyRole(EXECUTOR_ROLE) {
+    ) public payable virtual onlyRole(EXECUTOR_ROLE) nonReentrant {
         require(
             targets.length == values.length,
             "TimelockController: length mismatch"
@@ -542,7 +544,7 @@ contract TimelockController is AccessControl {
         bool _withUpdate,
         bytes32 predecessor,
         bytes32 salt
-    ) public payable virtual onlyRole(EXECUTOR_ROLE) {
+    ) public payable virtual onlyRole(EXECUTOR_ROLE) nonReentrant {
         bytes32 id =
             keccak256(
                 abi.encode(
