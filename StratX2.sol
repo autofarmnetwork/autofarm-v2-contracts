@@ -206,7 +206,7 @@ abstract contract StratX2 is Ownable, ReentrancyGuard, Pausable {
     // 2. Converts farm tokens into want tokens
     // 3. Deposits want tokens
 
-    function earn() public virtual whenNotPaused {
+    function earn() public virtual nonReentrant whenNotPaused {
         require(isAutoComp, "!isAutoComp");
         if (onlyGov) {
             require(msg.sender == govAddress, "!gov");
