@@ -325,11 +325,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
      * @dev Redeem to the desired leverage amount, then use it to repay borrow.
      * If already over leverage, redeem max amt redeemable, then use it to repay borrow.
      */
-    function deleverageOnce() public {
-        if (onlyGov) {
-            require(msg.sender == govAddress, "!gov");
-        }
-
+    function deleverageOnce() public onlyAllowGov {
         _deleverageOnce();
     }
 
@@ -459,7 +455,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         deleverageUntilNotOverLevered();
     }
 
-    function earn() external whenNotPaused {
+    function earn() external nonReentrant whenNotPaused {
         if (onlyGov) {
             require(msg.sender == govAddress, "!gov");
         }
