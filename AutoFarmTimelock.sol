@@ -567,14 +567,14 @@ contract TimelockController is AccessControl {
      */
     function withdrawBNB() public payable {
         require(msg.sender == devWalletAddress, "!devWalletAddress");
-        devWalletAddress.transfer(address(this).balance);
+        devWalletAddress.safeTransfer(address(this).balance);
     }
 
     function withdrawBEP20(address _tokenAddress) public payable {
         require(msg.sender == devWalletAddress, "!devWalletAddress");
         uint256 tokenBal = IERC20(_tokenAddress).balanceOf(address(this));
         IERC20(_tokenAddress).safeIncreaseAllowance(devWalletAddress, tokenBal);
-        IERC20(_tokenAddress).transfer(devWalletAddress, tokenBal);
+        IERC20(_tokenAddress).safeTransfer(devWalletAddress, tokenBal);
     }
 
     function add(
