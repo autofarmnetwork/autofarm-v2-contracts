@@ -48,6 +48,8 @@ interface IStrategy {
 
     function deleverageOnce() external;
 
+    function leverageOnce() external;
+
     function wrapBNB() external; // Specifically for the Venus WBNB vault.
 
     // In case new vaults require functions without a timelock as well, hoping to avoid having multiple timelock contracts
@@ -74,7 +76,7 @@ interface IStrategy {
  *
  * _Available since v3.3._
  */
-contract TimelockController is AccessControl {
+contract TimelockController is AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     bytes32 public constant TIMELOCK_ADMIN_ROLE =
@@ -395,7 +397,7 @@ contract TimelockController is AccessControl {
      *
      * - the caller must have the 'executor' role.
      */
-    function executeBatch (
+    function executeBatch(
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata datas,
@@ -567,14 +569,14 @@ contract TimelockController is AccessControl {
      */
     function withdrawBNB() public payable {
         require(msg.sender == devWalletAddress, "!devWalletAddress");
-        devWalletAddress.safeTransfer(address(this).balance);
+        devWalletAddress.transfer(address(this).balance);
     }
 
     function withdrawBEP20(address _tokenAddress) public payable {
         require(msg.sender == devWalletAddress, "!devWalletAddress");
         uint256 tokenBal = IERC20(_tokenAddress).balanceOf(address(this));
         IERC20(_tokenAddress).safeIncreaseAllowance(devWalletAddress, tokenBal);
-        IERC20(_tokenAddress).safeTransfer(devWalletAddress, tokenBal);
+        IERC20(_tokenAddress).transfer(devWalletAddress, tokenBal);
     }
 
     function add(
@@ -615,6 +617,13 @@ contract TimelockController is AccessControl {
         onlyRole(EXECUTOR_ROLE)
     {
         IStrategy(_stratAddress).deleverageOnce();
+    }
+
+    function leverageOnce(address _stratAddress)
+        public
+        onlyRole(EXECUTOR_ROLE)
+    {
+        IStrategy(_stratAddress).leverageOnce();
     }
 
     function wrapBNB(address _stratAddress) public onlyRole(EXECUTOR_ROLE) {
