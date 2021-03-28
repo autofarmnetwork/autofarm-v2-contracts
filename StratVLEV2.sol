@@ -295,10 +295,9 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
     function _farm(bool _withLev) internal {
         if (wantIsWBNB) {
             _unwrapBNB(); // WBNB -> BNB. Venus accepts BNB, not WBNB.
-            _leverage(address(this).balance, _withLev);
-        } else {
-            _leverage(wantLockedInHere(), _withLev);
         }
+
+        _leverage(_withLev);
 
         updateBalance();
 
@@ -309,16 +308,31 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
      * @dev Repeatedly supplies and borrows bnb following the configured {borrowRate} and {borrowDepth}
      * into the vToken contract.
      */
-    function _leverage(uint256 _amount, bool _withLev) internal {
+    function _leverage(bool _withLev) internal {
         if (_withLev) {
             for (uint256 i = 0; i < borrowDepth; i++) {
-                _supply(_amount);
-                _amount = _amount.mul(borrowRate).div(1000);
-                _borrow(_amount);
+                uint256 amount = venusWantBal();
+                _supply(amount);
+                amount = amount.mul(borrowRate).div(1000);
+                _borrow(amount);
             }
         }
 
-        _supply(_amount); // Supply remaining want that was last borrowed.
+        _supply(venusWantBal()); // Supply remaining want that was last borrowed.
+    }
+
+    function leverageOnce() public onlyAllowGov {
+        _leverageOnce();
+    }
+
+    function _leverageOnce() internal {
+        updateBalance(); // Updates borrowBal & supplyBal & supplyBalTargeted & supplyBalMin
+        uint256 borrowAmt = supplyBal.mul(borrowRate).div(1000).sub(borrowBal);
+        if (borrowAmt > 0) {
+            _borrow(borrowAmt);
+            _supply(venusWantBal());
+        }
+        updateBalance(); // Updates borrowBal & supplyBal & supplyBalTargeted & supplyBalMin
     }
 
     /**
@@ -549,7 +563,7 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
 
         IERC20(wantAddress).safeTransfer(autoFarmAddress, _wantAmt);
 
-        _farm(true);
+        _farm(false);
 
         return sharesRemoved;
     }
@@ -618,6 +632,16 @@ contract StratVLEV2 is Ownable, ReentrancyGuard, Pausable {
         } else {
             return wantBal;
         }
+    }
+
+    /**
+     * @dev Returns balance of want. If wantAddress is WBNB, returns BNB balance, not WBNB balance.
+     */
+    function venusWantBal() public view returns (uint256) {
+        if (wantIsWBNB) {
+            return address(this).balance;
+        }
+        return IERC20(wantAddress).balanceOf(address(this));
     }
 
     function setSettings(
