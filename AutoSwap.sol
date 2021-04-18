@@ -205,4 +205,6 @@ contract AutoSwap is Ownable, Pausable, Whitelist {
     function unpause() public onlyOwner {
         _unpause();
     }
+
+    receive() external payable {}
 }
