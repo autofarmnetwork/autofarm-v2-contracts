@@ -11,9 +11,11 @@ import "./helpers/Pausable.sol";
 
 import "./libraries/UniversalERC20.sol";
 
+import "./helpers/ReentrancyGuard.sol";
+
 import "./helpers/Whitelist.sol";
 
-contract AutoSwap is Ownable, Pausable, Whitelist {
+contract AutoSwap is Ownable, ReentrancyGuard, Pausable, Whitelist {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using UniversalERC20 for IERC20;
@@ -73,7 +75,7 @@ contract AutoSwap is Ownable, Pausable, Whitelist {
         uint256 guaranteedAmount,
         address payable referrer,
         CallStruct[] calldata calls
-    ) public payable whenNotPaused returns (uint256 outAmount) {
+    ) public payable nonReentrant whenNotPaused returns (uint256 outAmount) {
         // Initial checks
         require(minOutAmount > 0, "!(minOutAmount > 0)");
         require(calls.length > 0, "!(calls.length > 0)");
@@ -185,15 +187,15 @@ contract AutoSwap is Ownable, Pausable, Whitelist {
     }
 
     function changeFeeRate(uint256 _feeRate) public onlyOwner {
-        uint256 oldFeeRate = feeRate;
         require(_feeRate <= 10000, "!safe - too high");
+        uint256 oldFeeRate = feeRate;
         feeRate = _feeRate;
         emit FeeRateChanged(oldFeeRate, _feeRate);
     }
 
     function changeReferrerFeeRate(uint256 _referrerFeeRate) public onlyOwner {
-        uint256 oldReferrerFeeRate = referrerFeeRate;
         require(_referrerFeeRate <= 10000, "!safe - too high");
+        uint256 oldReferrerFeeRate = referrerFeeRate;
         referrerFeeRate = _referrerFeeRate;
         emit ReferrerFeeRateChanged(oldReferrerFeeRate, _referrerFeeRate);
     }
