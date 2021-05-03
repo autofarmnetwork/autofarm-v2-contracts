@@ -31,7 +31,8 @@ contract StratX2_AUTO is StratX2 {
         uint256 _controllerFee,
         uint256 _buyBackRate,
         uint256 _entranceFeeFactor,
-        uint256 _withdrawFeeFactor
+        uint256 _withdrawFeeFactor,
+        uint256 _minTimeToWithdraw
     ) public {
         wbnbAddress = _addresses[0];
         govAddress = _addresses[1];
@@ -62,6 +63,8 @@ contract StratX2_AUTO is StratX2 {
         buyBackAddress = _addresses[11];
         entranceFeeFactor = _entranceFeeFactor;
         withdrawFeeFactor = _withdrawFeeFactor;
+
+        minTimeToWithdraw = _minTimeToWithdraw;
 
         transferOwnership(autoFarmAddress);
     }
