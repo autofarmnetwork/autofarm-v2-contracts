@@ -151,7 +151,7 @@ contract StratX2_AUTO is StratX2 {
 
     function _unfarm(uint256 _wantAmt) internal override {}
 
-    function earn() public override whenNotPaused {
+    function earn() public override nonReentrant whenNotPaused {
         // require(isAutoComp, "!isAutoComp");
         if (onlyGov) {
             require(msg.sender == govAddress, "!gov");
