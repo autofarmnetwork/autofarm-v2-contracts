@@ -19,15 +19,15 @@ library UniversalERC20 {
         uint256 amount
     ) internal returns (bool) {
         if (amount == 0) {
-            return true;
+            return false;
         }
 
         if (isETH(token)) {
             address(uint160(to)).transfer(amount);
         } else {
             token.safeTransfer(to, amount);
-            return true;
         }
+        return true;
     }
 
     function universalTransferFrom(
