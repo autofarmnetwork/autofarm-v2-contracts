@@ -12,7 +12,7 @@ Upgraded version of the AUTO token was committed on 22nd January 2021.
 Timelock contract of all function calls set to 24 hours & functions that interact with the main contract and/or vaults that do not require a timelock include:
 
 add() — Add a new pool with 0 AUTO allocation.  
-set() — Increase/decrease AUTO Allocation (12h timelock). 
+set() — Increase/decrease AUTO Allocation (12h timelock)       
 earn()  
 farm()  
 pause()  
